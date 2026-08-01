@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import logging
 
 from app.database import get_db
 from app.models.models import User, UserRole, ServiceProvider
@@ -7,6 +8,7 @@ from app.schemas.schemas import UserRegister, UserLogin, Token, UserOut
 from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+log = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=UserOut, status_code=201)
@@ -42,7 +44,16 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    try:
+        is_valid_password = verify_password(payload.password, user.password_hash)
+    except Exception:  # pragma: no cover - malformed/legacy hashes
+        log.exception("Password verification failed for user id=%s", user.id)
+        is_valid_password = False
+
+    if not is_valid_password:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated")

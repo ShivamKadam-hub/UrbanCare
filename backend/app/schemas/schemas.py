@@ -162,6 +162,16 @@ class PaymentCreate(BaseModel):
     method: str = "card"
 
 
+class CheckoutSessionCreate(BaseModel):
+    booking_id: int
+
+
+class CheckoutSessionResponse(BaseModel):
+    session_id: str
+    checkout_url: str
+    publishable_key: str
+
+
 class PaymentOut(BaseModel):
     id: int
     booking_id: int
@@ -169,6 +179,8 @@ class PaymentOut(BaseModel):
     method: str
     status: str
     transaction_id: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
     paid_at: Optional[datetime] = None
 
     class Config:
@@ -198,6 +210,146 @@ class ReviewOut(BaseModel):
 
 class ReviewDetail(ReviewOut):
     customer: UserOut
+
+
+# ── Recurring Services ───────────────────────────────────────────────────────
+
+class RecurringServiceCreate(BaseModel):
+    service_id: int
+    recurrence_type: str  # weekly, biweekly, monthly
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    notes: Optional[str] = None
+
+
+class RecurringServiceUpdate(BaseModel):
+    recurrence_type: Optional[str] = None
+    end_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+    notes: Optional[str] = None
+
+
+class RecurringServiceOut(BaseModel):
+    id: int
+    customer_id: int
+    service_id: int
+    recurrence_type: str
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    next_booking_date: datetime
+    is_active: bool
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RecurringServiceDetail(RecurringServiceOut):
+    service: ServiceDetail
+
+
+# ── Reminders ────────────────────────────────────────────────────────────────
+
+class ReminderCreate(BaseModel):
+    recurring_service_id: int
+    reminder_type: str = "email"  # email, sms, in_app
+    scheduled_date: datetime
+    message: Optional[str] = None
+
+
+class ReminderMarkRead(BaseModel):
+    is_read: bool
+
+
+class ReminderOut(BaseModel):
+    id: int
+    recurring_service_id: int
+    customer_id: int
+    provider_id: int
+    reminder_type: str
+    reminder_status: str
+    scheduled_date: datetime
+    sent_at: Optional[datetime] = None
+    message: Optional[str] = None
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ── Skills & Expertise ───────────────────────────────────────────────────────
+
+class SkillCreate(BaseModel):
+    name: str
+    category_id: Optional[int] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+
+
+class SkillOut(BaseModel):
+    id: int
+    name: str
+    category_id: Optional[int] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProviderSkillCreate(BaseModel):
+    skill_id: int
+    skill_level: str = "intermediate"
+
+
+class ProviderSkillUpdate(BaseModel):
+    skill_level: Optional[str] = None
+    years_of_experience: Optional[int] = None
+
+
+class ProviderSkillOut(BaseModel):
+    id: int
+    provider_id: int
+    skill_id: int
+    skill_level: str
+    completed_jobs: int
+    avg_rating: float
+    percentile_rank: int
+    verified: bool
+    years_of_experience: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProviderSkillDetail(ProviderSkillOut):
+    skill: SkillOut
+
+
+class SkillReviewCreate(BaseModel):
+    skill_id: int
+    rating: int  # 1-5
+    comment: Optional[str] = None
+    would_rebook: bool = True
+
+
+class SkillReviewOut(BaseModel):
+    id: int
+    booking_id: int
+    provider_id: int
+    skill_id: int
+    rating: int
+    comment: Optional[str] = None
+    would_rebook: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # ── Admin / Analytics ────────────────────────────────────────────────────────

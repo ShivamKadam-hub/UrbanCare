@@ -26,7 +26,10 @@ export default function Navbar() {
           ) : (
             <>
               {user.role === 'customer' && (
-                <li><Link to="/dashboard" className={active('/dashboard')}>Dashboard</Link></li>
+                <>
+                  <li><Link to="/dashboard" className={active('/dashboard')}>Dashboard</Link></li>
+                  <li><Link to="/recurring-services" className={active('/recurring-services')}>Reminders</Link></li>
+                </>
               )}
               {user.role === 'provider' && (
                 <li><Link to="/provider" className={active('/provider')}>Provider Dashboard</Link></li>

@@ -15,12 +15,41 @@ export default function CustomerDashboard() {
   const [tab, setTab] = useState('bookings');
   const [bookings, setBookings] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [reviewModal, setReviewModal] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     api.get('/bookings').then(r => setBookings(r.data)).catch(() => {});
     api.get('/payments').then(r => setPayments(r.data)).catch(() => {});
   }, [user]);
+
+  const handleSubmitReview = async (bookingId) => {
+    if (!reviewRating || reviewRating < 1 || reviewRating > 5) {
+      alert('Please select a rating between 1 and 5');
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      await api.post('/reviews', {
+        booking_id: bookingId,
+        rating: reviewRating,
+        comment: reviewComment || undefined,
+      });
+      alert('Review submitted successfully!');
+      setReviewModal(null);
+      setReviewRating(5);
+      setReviewComment('');
+      // Refresh bookings to reflect review status
+      api.get('/bookings').then(r => setBookings(r.data)).catch(() => {});
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to submit review');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   if (!user) return null;
 
@@ -77,18 +106,40 @@ export default function CustomerDashboard() {
             ) : (
               <table className="data-table">
                 <thead>
-                  <tr><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Amount</th></tr>
+                  <tr><th>Service</th><th>Date</th><th>Time</th><th>Status</th><th>Amount</th><th>Action</th></tr>
                 </thead>
                 <tbody>
-                  {bookings.map(b => (
-                    <tr key={b.id}>
-                      <td>{b.service?.title || `Service #${b.service_id}`}</td>
-                      <td>{b.booking_date}</td>
-                      <td>{b.time_slot}</td>
-                      <td><span className={`badge ${STATUS_BADGE[b.status] || ''}`}>{b.status}</span></td>
-                      <td>₹{b.service?.price?.toLocaleString() || '—'}</td>
-                    </tr>
-                  ))}
+                  {bookings.map(b => {
+                    const handlePayNow = async () => {
+                      try {
+                        const res = await api.post('/payments/create-checkout-session', {
+                          booking_id: b.id,
+                        });
+                        window.location.href = res.data.checkout_url;
+                      } catch (err) {
+                        alert(err.response?.data?.detail || 'Payment failed');
+                      }
+                    };
+                    return (
+                      <tr key={b.id}>
+                        <td>{b.service?.title || `Service #${b.service_id}`}</td>
+                        <td>{b.booking_date}</td>
+                        <td>{b.time_slot}</td>
+                        <td><span className={`badge ${STATUS_BADGE[b.status] || ''}`}>{b.status}</span></td>
+                        <td>₹{b.service?.price?.toLocaleString() || '—'}</td>
+                        <td>
+                          {b.status === 'pending' ? (
+                            <button className="btn btn-primary btn-sm" onClick={handlePayNow}>💳 Pay Now</button>
+                          ) : b.status === 'completed' ? (
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button className="btn btn-primary btn-sm" onClick={handlePayNow}>💳 Pay Now</button>
+                              <button className="btn btn-secondary btn-sm" onClick={() => setReviewModal(b.id)} style={{ background: 'rgba(108,92,231,0.15)', color: 'var(--primary-light)', border: '1px solid var(--primary)' }}>⭐ Review</button>
+                            </div>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -131,6 +182,56 @@ export default function CustomerDashboard() {
           </>
         )}
       </main>
+
+      {/* Review Modal */}
+      {reviewModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setReviewModal(null)}>
+          <div className="glass-card" style={{ padding: 32, maxWidth: 400, borderRadius: 12 }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ marginBottom: 20 }}>Leave a Review</h2>
+            <div className="form-group">
+              <label>Rating (1-5 stars)</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <button
+                    key={i}
+                    onClick={() => setReviewRating(i)}
+                    style={{
+                      fontSize: 28, background: 'none', border: 'none', cursor: 'pointer',
+                      opacity: i <= reviewRating ? 1 : 0.3, transform: i <= reviewRating ? 'scale(1.1)' : 'scale(1)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    ⭐
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Comment (optional)</label>
+              <textarea
+                className="form-control"
+                value={reviewComment}
+                onChange={e => setReviewComment(e.target.value)}
+                placeholder="Share your experience..."
+                rows={4}
+                style={{ resize: 'vertical', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button className="btn btn-primary" onClick={() => handleSubmitReview(reviewModal)} disabled={reviewSubmitting} style={{ flex: 1 }}>
+                {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+              </button>
+              <button className="btn" onClick={() => setReviewModal(null)} style={{ flex: 1 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -52,3 +52,23 @@ def send_booking_reminder(to_email: str, booking_id: int, service_title: str, da
         f"<p>You have a booking for <b>{service_title}</b> on <b>{date}</b> at <b>{slot}</b>.</p>"
         f"<p>Please be ready!</p>",
     )
+
+
+def send_reminder_email(to_email: str, customer_name: str, service_name: str, reminder_message: str, scheduled_date):
+    """Send a reminder email for recurring services"""
+    from datetime import datetime
+    
+    formatted_date = scheduled_date.strftime("%B %d, %Y at %I:%M %p") if isinstance(scheduled_date, datetime) else str(scheduled_date)
+    
+    send_email(
+        to_email,
+        f"UrbanCare – Service Reminder: {service_name}",
+        f"<h2>Service Reminder</h2>"
+        f"<p>Hi {customer_name},</p>"
+        f"<p>{reminder_message}</p>"
+        f"<p><b>Scheduled Date:</b> {formatted_date}</p>"
+        f"<p>Please prepare for your upcoming service.</p>"
+        f"<hr/>"
+        f"<p><small>This is an automated reminder from UrbanCare Services. "
+        f"If you need to reschedule or cancel, please log in to your account.</small></p>",
+    )

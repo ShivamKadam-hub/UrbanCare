@@ -87,23 +87,6 @@ def update_booking_status(
         raise HTTPException(400, f"Invalid status: {payload.status}")
 
     booking.status = new_status
-    
-    # Auto-create payment when booking is marked as completed
-    if new_status == BookingStatus.COMPLETED:
-        existing_payment = db.query(Payment).filter(Payment.booking_id == booking.id).first()
-        if not existing_payment:
-            service = db.query(Service).filter(Service.id == booking.service_id).first()
-            if service:
-                payment = Payment(
-                    booking_id=booking.id,
-                    amount=service.price,
-                    method="card",
-                    status=PaymentStatus.COMPLETED,
-                    transaction_id=f"TXN-{uuid.uuid4().hex[:12].upper()}",
-                    paid_at=datetime.datetime.utcnow(),
-                )
-                db.add(payment)
-    
     db.commit()
     db.refresh(booking)
 
@@ -115,3 +98,34 @@ def update_booking_status(
             send_booking_confirmation(customer.email, booking.id, service.title, booking.booking_date, booking.time_slot)
 
     return booking
+
+
+@router.get("/available-slots/{service_id}", response_model=dict)
+def get_available_slots(
+    service_id: int,
+    booking_date: str,  # YYYY-MM-DD
+    db: Session = Depends(get_db),
+):
+    """Get available time slots for a service on a given date (excludes already booked slots)."""
+    service = db.query(Service).filter(Service.id == service_id).first()
+    if not service:
+        raise HTTPException(404, "Service not found")
+
+    # All possible time slots (08:00-20:00, 1-hour slots)
+    all_slots = [
+        '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
+        '12:00-13:00', '13:00-14:00', '14:00-15:00', '15:00-16:00',
+        '16:00-17:00', '17:00-18:00', '18:00-19:00', '19:00-20:00',
+    ]
+
+    # Get confirmed or completed bookings for this service on this date
+    booked_slots = db.query(Booking.time_slot).filter(
+        Booking.service_id == service_id,
+        Booking.booking_date == booking_date,
+        Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED])
+    ).all()
+
+    booked_time_slots = [slot[0] for slot in booked_slots]
+    available_slots = [slot for slot in all_slots if slot not in booked_time_slots]
+
+    return {"available_slots": available_slots, "booked_slots": booked_time_slots}

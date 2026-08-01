@@ -10,6 +10,9 @@ import BookingPage from './pages/BookingPage';
 import CustomerDashboard from './pages/CustomerDashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
 import AdminPanel from './pages/AdminPanel';
+import RecurringServicesPage from './pages/RecurringServicesPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentCancelPage from './pages/PaymentCancelPage';
 import { useAuth } from './context/AuthContext';
 import './App.css';
 
@@ -35,8 +38,11 @@ export default function App() {
         <Route path="/services/:id" element={<ServiceDetailPage />} />
         <Route path="/booking/:serviceId" element={<BookingPage />} />
         <Route path="/dashboard" element={<CustomerDashboard />} />
+        <Route path="/recurring-services" element={<RecurringServicesPage />} />
         <Route path="/provider" element={<ProviderDashboard />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/cancel" element={<PaymentCancelPage />} />
       </Routes>
       <Routes>
         <Route path="/" element={<Footer />} />

@@ -170,13 +170,16 @@ img { max-width: 100%; display: block; }
 }
 
 .btn-secondary {
-  background: var(--bg-glass);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  color: #ffffff;
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  box-shadow: 0 4px 18px rgba(20, 184, 166, 0.28);
 }
 .btn-secondary:hover {
-  background: var(--bg-glass-hover);
-  border-color: var(--primary);
+  background: linear-gradient(135deg, #0d9488, #115e59);
+  border-color: rgba(20, 184, 166, 0.55);
+  box-shadow: 0 8px 28px rgba(20, 184, 166, 0.36);
+  transform: translateY(-1px);
 }
 
 .btn-accent {
